@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Detection & Media Authentication</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between">
+                <div class="flex space-x-7">
+                    <a href="{{ url_for('index') }}" class="flex items-center py-4">
+                        <span class="font-semibold text-gray-500 text-lg">Deepfake Detector</span>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-3">
+                    {% if current_user.is_authenticated %}
+                        <span class="text-gray-500">Welcome, {{ current_user.username }}</span>
+                        <a href="{{ url_for('logout') }}" class="py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded transition duration-300">Logout</a>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded transition duration-300">Login</a>
+                        <a href="{{ url_for('register') }}" class="py-2 px-4 bg-green-500 hover:bg-green-600 text-white rounded transition duration-300">Register</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">Deepfake Detection & Media Authentication</h1>
+            <p class="text-gray-600">Upload your media file for analysis and verification</p>
+        </header>
+
+        {% if current_user.is_authenticated %}
+            <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+                <div class="mb-8">
+                    <div class="flex items-center justify-center w-full">
+                        <label class="flex flex-col w-full h-32 border-4 border-dashed hover:bg-gray-100 hover:border-gray-300">
+                            <div class="space-y-1 text-center">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <div class="flex flex-col items-center text-sm text-gray-600">
+                                    <p class="font-medium">
+                                        Select a file
+                                    </p>
+                                    <p id="uploadStatus" class="text-xs mt-1"></p>
+                                </div>
+                                <div id="uploadProgress" class="hidden w-full mt-2">
+                                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div id="uploadProgressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                                    </div>
+                                    <p id="uploadProgressText" class="text-xs text-gray-600 mt-1">0%</p>
+                                </div>
+                            </div>
+                            <input type="file" class="opacity-0" id="mediaInput" accept="image/*,video/*" />
+                        </label>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button id="analyzeBtn" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-400" disabled>
+                        Analyze Media
+                    </button>
+                </div>
+
+                <div id="results" class="mt-8 hidden">
+                    <h2 class="text-2xl font-semibold mb-4">Analysis Results</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Deepfake Detection Results -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-lg font-semibold mb-2">Deepfake Detection</h3>
+                            <div id="deepfakeResults" class="space-y-2">
+                                <p class="text-gray-700">Probability: <span id="deepfakeProbability">-</span></p>
+                                <div id="deepfakeStatus" class="mt-2 p-2 rounded-lg text-white"></div>
+                            </div>
+                        </div>
+
+                        <!-- Authentication Results -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-lg font-semibold mb-2">Media Authentication</h3>
+                            <div id="authResults" class="space-y-2">
+                                <p class="text-gray-700">Authenticity Score: <span id="authScore">-</span></p>
+                                <div id="authStatus" class="mt-2 p-2 rounded-lg text-white"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8 text-center">
+                <p class="text-lg text-gray-600 mb-4">Please login or register to use the Deepfake Detection service.</p>
+                <div class="space-x-4">
+                    <a href="{{ url_for('login') }}" class="inline-block py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded transition duration-300">Login</a>
+                    <a href="{{ url_for('register') }}" class="inline-block py-2 px-4 bg-green-500 hover:bg-green-600 text-white rounded transition duration-300">Register</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        const mediaInput = document.getElementById('mediaInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const results = document.getElementById('results');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const uploadProgressBar = document.getElementById('uploadProgressBar');
+        const uploadProgressText = document.getElementById('uploadProgressText');
+
+        mediaInput.addEventListener('change', () => {
+            const file = mediaInput.files[0];
+            if (file) {
+                // Show progress elements
+                uploadProgress.classList.remove('hidden');
+                uploadStatus.textContent = `Selected file: ${file.name}`;
+                
+                // Simulate upload progress (since it's local file handling)
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 5;
+                    if (progress <= 100) {
+                        uploadProgressBar.style.width = `${progress}%`;
+                        uploadProgressText.textContent = `${progress}%`;
+                    } else {
+                        clearInterval(interval);
+                        uploadStatus.textContent = `File uploaded successfully: ${file.name}`;
+                        uploadStatus.className = 'text-xs mt-1 text-green-600 font-semibold';
+                        analyzeBtn.disabled = false;
+                    }
+                }, 50);
+            } else {
+                uploadProgress.classList.add('hidden');
+                uploadStatus.textContent = '';
+                analyzeBtn.disabled = true;
+            }
+        });
+
+        analyzeBtn.addEventListener('click', async () => {
+            const file = mediaInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                analyzeBtn.disabled = true;
+                analyzeBtn.textContent = 'Analyzing...';
+                results.classList.add('hidden');
+
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Analysis failed');
+                }
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Display results
+                results.classList.remove('hidden');
+                
+                // Update Deepfake Results
+                const deepfakeProb = (data.deepfake_probability * 100).toFixed(2);
+                document.getElementById('deepfakeProbability').textContent = `${deepfakeProb}%`;
+                
+                const deepfakeStatus = document.getElementById('deepfakeStatus');
+                deepfakeStatus.textContent = data.is_deepfake ? 'DEEPFAKE DETECTED' : 'LIKELY AUTHENTIC';
+                deepfakeStatus.className = `mt-2 p-2 rounded-lg text-white ${
+                    data.is_deepfake ? 'bg-red-500' : 'bg-green-500'
+                }`;
+
+                // Update Authentication Results
+                const authScore = (data.authentication.authenticity_score * 100).toFixed(2);
+                document.getElementById('authScore').textContent = `${authScore}%`;
+                
+                const authStatus = document.getElementById('authStatus');
+                authStatus.textContent = data.authentication.is_authentic ? 'VERIFIED AUTHENTIC' : 'AUTHENTICATION FAILED';
+                authStatus.className = `mt-2 p-2 rounded-lg text-white ${
+                    data.authentication.is_authentic ? 'bg-green-500' : 'bg-red-500'
+                }`;
+
+            } catch (error) {
+                console.error('Analysis failed:', error);
+                alert(error.message || 'Analysis failed. Please try again.');
+                results.classList.add('hidden');
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'Analyze Media';
+            }
+        });
+    </script>
+</body>
+</html>
