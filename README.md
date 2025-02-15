@@ -15,7 +15,7 @@ This project implements a web-based system for detecting deepfake media and auth
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/YASHMANIC/Deepfake-detection.git
 cd deepfake-detection
 ```
 
@@ -68,11 +68,3 @@ python app.py
 - Error Level Analysis (ELA)
 - Noise pattern inconsistency detection
 - File integrity verification
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
