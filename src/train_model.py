@@ -2,7 +2,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard, ReduceLROnPlateau
 from detector import DeepfakeDetector
 import matplotlib.pyplot as plt
 
@@ -27,11 +27,14 @@ class ModelTrainer:
         # Data augmentation for training
         train_datagen = ImageDataGenerator(
             rescale=1./255,
-            rotation_range=20,
+            rotation_range=30,
             width_shift_range=0.2,
             height_shift_range=0.2,
+            shear_range=0.2,
+            zoom_range=0.2,
             horizontal_flip=True,
-            fill_mode='nearest'
+            fill_mode='nearest',
+            brightness_range=[0.8, 1.2]
         )
         
         # Only rescaling for validation
@@ -54,20 +57,28 @@ class ModelTrainer:
             classes=['real', 'fake']
         )
     
-    def train(self, epochs=50, initial_epoch=0):
+    def train(self, epochs=100, initial_epoch=0):
         """Train the model"""
         # Create callbacks
         checkpoint = ModelCheckpoint(
-            'models/deepfake_model_{epoch:02d}_{val_accuracy:.4f}.h5',
+            'models/deepfake_model_{epoch:02d}_{val_accuracy:.4f}.weights.h5',
             monitor='val_accuracy',
             save_best_only=True,
+            save_weights_only=True,
             mode='max'
         )
         
         early_stopping = EarlyStopping(
             monitor='val_loss',
-            patience=10,
+            patience=15,
             restore_best_weights=True
+        )
+        
+        reduce_lr = ReduceLROnPlateau(
+            monitor='val_loss',
+            factor=0.2,
+            patience=5,
+            min_lr=1e-6
         )
         
         tensorboard = TensorBoard(
@@ -82,7 +93,7 @@ class ModelTrainer:
             epochs=epochs,
             initial_epoch=initial_epoch,
             validation_data=self.val_generator,
-            callbacks=[checkpoint, early_stopping, tensorboard]
+            callbacks=[checkpoint, early_stopping, reduce_lr, tensorboard]
         )
         
         return history
