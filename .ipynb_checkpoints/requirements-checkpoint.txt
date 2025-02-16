@@ -1,0 +1,16 @@
+Flask
+Flask-Login
+Werkzeug
+tensorflow
+tensorflow-hub
+numpy
+opencv-python
+Pillow
+python-magic
+requests
+scikit-learn
+matplotlib
+pandas
+face-recognition
+dlib
+python-dotenv

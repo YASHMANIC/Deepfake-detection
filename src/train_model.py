@@ -140,7 +140,7 @@ if __name__ == "__main__":
     trainer.setup_data_generators()
     
     # Train the model
-    history = trainer.train(epochs=10)
+    history = trainer.train(epochs=5)
     
     # Plot training history
     trainer.plot_training_history(history)
