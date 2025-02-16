@@ -161,3 +161,4 @@ class MediaAuthenticator:
         results['is_authentic'] = bool(authenticity_score > 0.7)
         
         return results
+
