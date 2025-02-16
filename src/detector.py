@@ -14,8 +14,19 @@ class DeepfakeDetector:
         """
         self.image_size = (224, 224)
         if model_path and os.path.exists(model_path):
-            self.model = tf.keras.models.load_model(model_path)
-            print(f"Loaded model from {model_path}")
+            try:
+                # Create a fresh model
+                self.model = self._build_model()
+                
+                # Load weights directly instead of the full model
+                print(f"Loading weights from {model_path}")
+                self.model.load_weights(model_path)
+                print("Weights loaded successfully")
+                
+            except Exception as e:
+                print(f"Error loading model weights: {str(e)}")
+                print("Creating new model instead.")
+                self.model = self._build_model()
         else:
             self.model = self._build_model()
             print("Created new model")
@@ -29,22 +40,29 @@ class DeepfakeDetector:
             input_shape=(224, 224, 3)
         )
         
-        # Freeze the base model
-        base_model.trainable = False
-        
-        # Build the complete model
+        # Unfreeze some layers for fine-tuning
+        for layer in base_model.layers[-30:]:
+            layer.trainable = True
+            
+        # Build the model
         model = tf.keras.Sequential([
             base_model,
             tf.keras.layers.GlobalAveragePooling2D(),
-            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(256, activation='relu'),
+            tf.keras.layers.BatchNormalization(),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.BatchNormalization(),
             tf.keras.layers.Dense(1, activation='sigmoid')
         ])
         
-        # Compile the model
+        # Compile with a lower learning rate
+        optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+            optimizer=optimizer,
             loss='binary_crossentropy',
-            metrics=['accuracy']
+            metrics=['accuracy', tf.keras.metrics.AUC()]
         )
         
         return model
